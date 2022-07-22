@@ -1,0 +1,223 @@
+{
+  "description": "Order Lookup IVR",
+  "states": [
+    {
+      "name": "Trigger",
+      "type": "trigger",
+      "transitions": [
+        {
+          "event": "incomingMessage"
+        },
+        {
+          "next": "allow_list",
+          "event": "incomingCall"
+        },
+        {
+          "event": "incomingConversationMessage"
+        },
+        {
+          "event": "incomingRequest"
+        },
+        {
+          "event": "incomingParent"
+        }
+      ],
+      "properties": {
+        "offset": {
+          "x": 740,
+          "y": -410
+        }
+      }
+    },
+    {
+      "name": "forward_call",
+      "type": "connect-call-to",
+      "transitions": [
+        {
+          "event": "callCompleted"
+        }
+      ],
+      "properties": {
+        "offset": {
+          "x": 40,
+          "y": 910
+        },
+        "caller_id": "{{contact.channel.address}}",
+        "noun": "number",
+        "to": "{{widgets.order_lookup.body}}",
+        "timeout": 30
+      }
+    },
+    {
+      "name": "order_no",
+      "type": "gather-input-on-call",
+      "transitions": [
+        {
+          "next": "order_lookup",
+          "event": "keypress"
+        },
+        {
+          "event": "speech"
+        },
+        {
+          "event": "timeout"
+        }
+      ],
+      "properties": {
+        "speech_timeout": "auto",
+        "offset": {
+          "x": 470,
+          "y": 230
+        },
+        "loop": 1,
+        "finish_on_key": "#",
+        "say": "Please enter the order number.",
+        "stop_gather": true,
+        "gather_language": "en",
+        "profanity_filter": "true",
+        "timeout": 5
+      }
+    },
+    {
+      "name": "order_lookup",
+      "type": "run-function",
+      "transitions": [
+        {
+          "next": "say_play_1",
+          "event": "success"
+        },
+        {
+          "event": "fail"
+        }
+      ],
+      "properties": {
+        "service_sid": "ZS5e6a380e716e80587d5ca025cd8797a6",
+        "environment_sid": "ZE108a9762ca7f50d6d4abb6f159f6c1b9",
+        "offset": {
+          "x": 320,
+          "y": 450
+        },
+        "function_sid": "ZH1276e1872729dad365cd69104809a0d0",
+        "parameters": [
+          {
+            "value": "{{widgets.order_no.Digits}}",
+            "key": "orderNumber"
+          }
+        ],
+        "url": "https://example.com/httpRequest"
+      }
+    },
+    {
+      "name": "allow_list",
+      "type": "run-function",
+      "transitions": [
+        {
+          "next": "allow_split",
+          "event": "success"
+        },
+        {
+          "event": "fail"
+        }
+      ],
+      "properties": {
+        "service_sid": "ZS5e6a380e716e80587d5ca025cd8797a6",
+        "environment_sid": "ZE108a9762ca7f50d6d4abb6f159f6c1b9",
+        "offset": {
+          "x": 760,
+          "y": -230
+        },
+        "function_sid": "ZH0579a70e11af2b0c842d2e7b32e73f56",
+        "parameters": [
+          {
+            "value": "{{trigger.call.From}}",
+            "key": "storeNumber"
+          }
+        ],
+        "url": "https://example.com/allow"
+      }
+    },
+    {
+      "name": "allow_split",
+      "type": "split-based-on",
+      "transitions": [
+        {
+          "event": "noMatch"
+        },
+        {
+          "next": "order_no",
+          "event": "match",
+          "conditions": [
+            {
+              "friendly_name": "true",
+              "arguments": [
+                "{{widgets.allow_list.parsed.matched}}"
+              ],
+              "type": "equal_to",
+              "value": "true"
+            }
+          ]
+        },
+        {
+          "next": "error",
+          "event": "match",
+          "conditions": [
+            {
+              "friendly_name": "false",
+              "arguments": [
+                "{{widgets.allow_list.parsed.matched}}"
+              ],
+              "type": "equal_to",
+              "value": "false"
+            }
+          ]
+        }
+      ],
+      "properties": {
+        "input": "{{widgets.allow_list.parsed.matched}}",
+        "offset": {
+          "x": 640,
+          "y": 20
+        }
+      }
+    },
+    {
+      "name": "say_play_1",
+      "type": "say-play",
+      "transitions": [
+        {
+          "next": "forward_call",
+          "event": "audioComplete"
+        }
+      ],
+      "properties": {
+        "offset": {
+          "x": 130,
+          "y": 690
+        },
+        "loop": 1,
+        "say": "Thank you, you're now being connected with the customer."
+      }
+    },
+    {
+      "name": "error",
+      "type": "say-play",
+      "transitions": [
+        {
+          "event": "audioComplete"
+        }
+      ],
+      "properties": {
+        "offset": {
+          "x": 1010,
+          "y": 240
+        },
+        "loop": 1,
+        "say": "Sorry, the number you are trying to reach cannot accept your call. For additional assitance, please call Customer Service at 1-800-555-0000."
+      }
+    }
+  ],
+  "initial_state": "Trigger",
+  "flags": {
+    "allow_concurrent_calls": true
+  }
+}
